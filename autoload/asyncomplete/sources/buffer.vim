@@ -5,6 +5,10 @@ let g:asyncomplete_buffer_clear_cache = get(g:, 'asyncomplete_buffer_clear_cache
 let g:asyncomplete_buffer_split_pattern = '!"#$%&''()*+,-./:;<=>?@\[\]^`{|}~ \t\r\n　、。，．・：；？！‘’“”（）〔〕［］｛｝〈〉《》「」『』【】'
 
 function! asyncomplete#sources#buffer#completor(opt, ctx)
+    call timer_start(1, function('s:completor', [a:opt, a:ctx]))
+endfunction
+
+function! s:completor(opt, ctx, timer)
     let l:typed = a:ctx['typed']
 
     call s:refresh_keyword_incremental(l:typed)
@@ -28,7 +32,7 @@ endfunction
 
 function! asyncomplete#sources#buffer#get_source_options(opts)
     return extend({
-        \ 'events': ['BufEnter', 'InsertEnter', 'InsertLeave', 'CursorHoldI', 'CursorHold'],
+        \ 'events': ['BufEnter', 'InsertEnter', 'InsertLeave'],
         \ 'on_event': function('s:on_event'),
         \}, a:opts)
 endfunction
@@ -54,13 +58,11 @@ function! s:on_event(opt, ctx, event) abort
     if s:should_ignore(a:opt) | return | endif
 
     if a:event == 'BufEnter' || a:event == 'InsertEnter' || a:event == 'InsertLeave'
-        call s:refresh_keywords()
-    elseif a:event == 'CursorHold' || a:event == 'CursorHoldI'
-        call s:refresh_keyword_incremental(a:ctx['typed'])
+        call timer_start(1, function('s:refresh_keywords'))
     endif
 endfunction
 
-function! s:refresh_keywords() abort
+function! s:refresh_keywords(timer) abort
     if g:asyncomplete_buffer_clear_cache
         let s:words = {}
     endif
