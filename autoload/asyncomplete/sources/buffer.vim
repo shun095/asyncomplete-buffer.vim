@@ -66,7 +66,10 @@ function! s:refresh_keywords(timer) abort
     if g:asyncomplete_buffer_clear_cache
         let s:words = {}
     endif
-    let l:text = join(getline(1, '$'), "\n")
+    let l:text = ""
+    for l:bufnr in tabpagebuflist()
+      let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
+    endfor
     for l:word in split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
         if len(l:word) > 1
             let s:words[l:word] = 1
