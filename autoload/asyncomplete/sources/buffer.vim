@@ -32,7 +32,7 @@ endfunction
 
 function! asyncomplete#sources#buffer#get_source_options(opts)
     return extend({
-        \ 'events': ['BufEnter', 'InsertEnter', 'InsertLeave'],
+        \ 'events': ['CursorHold', 'CursorHoldI'],
         \ 'on_event': function('s:on_event'),
         \}, a:opts)
 endfunction
@@ -57,7 +57,7 @@ let s:last_ctx = {}
 function! s:on_event(opt, ctx, event) abort
     if s:should_ignore(a:opt) | return | endif
 
-    if a:event == 'BufEnter' || a:event == 'InsertEnter' || a:event == 'InsertLeave'
+    if a:event == 'CursorHold' || a:event == 'CursorHoldI'
         call timer_start(1, function('s:refresh_keywords'))
     endif
 endfunction
@@ -67,9 +67,10 @@ function! s:refresh_keywords(timer) abort
         let s:words = {}
     endif
     let l:text = ""
-    for l:bufnr in tabpagebuflist()
-      let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
-    endfor
+    " for l:bufnr in tabpagebuflist()
+    let l:bufnr = bufnr()
+    let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
+    " endfor
     for l:word in split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
         if len(l:word) > 1
             let s:words[l:word] = 1
