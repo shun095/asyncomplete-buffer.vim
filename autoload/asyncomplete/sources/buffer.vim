@@ -1,6 +1,7 @@
 let s:words = {}
 let s:last_word = ''
 let g:asyncomplete_buffer_clear_cache = get(g:, 'asyncomplete_buffer_clear_cache', 1)
+let g:asyncomplete_buffer_mecab_args = get(g:, 'asyncomplete_buffer_mecab_args','')
 
 let g:asyncomplete_buffer_split_pattern = '!"#$%&''()*+,-./:;<=>?@\[\]^`{|}~ \t\r\n　、。，．・：；？！‘’“”（）〔〕［］｛｝〈〉《》「」『』【】'
 
@@ -71,6 +72,11 @@ function! s:refresh_keywords(timer) abort
     let l:bufnr = bufnr("")
     let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
     " endfor
+
+    if executable("mecab")
+      let l:text = system("mecab -O wakati " .. g:asyncomplete_buffer_mecab_args, l:text)
+    endif
+
     for l:word in split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
         if len(l:word) > 1
             let s:words[l:word] = 1
