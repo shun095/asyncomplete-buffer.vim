@@ -33,7 +33,7 @@ endfunction
 
 function! asyncomplete#sources#buffer#get_source_options(opts)
     return extend({
-        \ 'events': ['CursorHold', 'CursorHoldI'],
+        \ 'events': ['CursorHold', 'CursorHoldI', 'InsertEnter'],
         \ 'on_event': function('s:on_event'),
         \}, a:opts)
 endfunction
@@ -58,7 +58,14 @@ let s:last_ctx = {}
 function! s:on_event(opt, ctx, event) abort
     if s:should_ignore(a:opt) | return | endif
 
-    if a:event == 'CursorHold' || a:event == 'CursorHoldI'
+    let l:buffer_size = line2byte(line('$') + 1)
+    if l:buffer_size < 100000 " 100kb
+      if a:event == 'CursorHold' || a:event == 'CursorHoldI'
+          call timer_start(1, function('s:refresh_keywords'))
+      endif
+    endif
+
+    if a:event == 'InsertEnter'
         call timer_start(1, function('s:refresh_keywords'))
     endif
 endfunction
@@ -73,11 +80,39 @@ function! s:refresh_keywords(timer) abort
     let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
     " endfor
 
+    let l:word_list = split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
+
     if executable("mecab")
-      let l:text = system("mecab -O wakati " .. g:asyncomplete_buffer_mecab_args, l:text)
+      let l:mecab_text = system("mecab -O wakati " . g:asyncomplete_buffer_mecab_args, substitute(l:text, '[a-zA-Z0-9_]', '', 'g'))
+
+      let l:mecab_word_list = split(l:mecab_text, '['.g:asyncomplete_buffer_split_pattern.']\+')
+
+      let l:buffer_size = line2byte(line('$') + 1)
+      if l:buffer_size < 100000 " 100kb
+        let l:concat_min_len = 3
+        let l:concat_max_len = 7
+        let l:concat_stide_len = 2
+        let l:word_list_len = len(l:mecab_word_list)
+      else
+        let l:concat_min_len = 5
+        let l:concat_max_len = 5
+        let l:concat_stide_len = 2
+        let l:word_list_len = len(l:mecab_word_list)
+      endif
+
+      for concat_len in range(l:concat_min_len, l:concat_max_len, l:concat_stide_len)
+        if l:word_list_len - concat_len + 1 > 0
+          for i in range(l:word_list_len - concat_len + 1)
+            let l:joined = join(l:mecab_word_list[i:i+concat_len-1],"")
+            let l:mecab_word_list = add(l:mecab_word_list, l:joined)
+          endfor
+        endif
+      endfor
     endif
 
-    for l:word in split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
+    let l:word_list = extend(l:word_list, get(l:,'mecab_word_list',[]))
+
+    for l:word in l:word_list
         if len(l:word) > 1
             let s:words[l:word] = 1
         endif
