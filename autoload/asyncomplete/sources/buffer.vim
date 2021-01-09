@@ -68,7 +68,7 @@ function! s:refresh_keywords(timer) abort
     endif
     let l:text = ""
     " for l:bufnr in tabpagebuflist()
-    let l:bufnr = bufnr()
+    let l:bufnr = bufnr("")
     let l:text = l:text . join(getbufline(l:bufnr, 1, '$'), "\n") . "\n"
     " endfor
     for l:word in split(l:text, '['.g:asyncomplete_buffer_split_pattern.']\+')
